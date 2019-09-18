@@ -1,0 +1,11 @@
+{
+  "name": "wave-5",
+  "version": "1.0.0",
+  "main": "server.js",
+  "repository": "https://github.com/evanlorim/wave-5",
+  "author": "Evan Lori Mahone",
+  "license": "GPL",
+  "devDependencies": {
+    "express": "^4.17.1"
+  }
+}
