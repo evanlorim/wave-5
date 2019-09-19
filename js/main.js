@@ -11,10 +11,10 @@ var inputMap = {
 	"a": "buttons[1]",
 	"y": "buttons[2]",
 	"x": "buttons[3]",
-	"lb": "buttons[4]",
-	"rb": "buttons[5]",
-	"lt": "buttons[6]",
-	"rt": "buttons[7]",
+	"l": "buttons[4]",
+	"r": "buttons[5]",
+	"zl": "buttons[6]",
+	"zr": "buttons[7]",
 	"select": "buttons[8]",
 	"start": "buttons[9]",
 	"l_joy": "buttons[10]",
@@ -23,22 +23,22 @@ var inputMap = {
 	"snap": "buttons[13]"
 };
 
-var opts;
+var cfg;
 var gamepad;
 var canvasSize = _.min([window.innerWidth,window.innerHeight]);
 var fragmentShader, vertexShader;
-var container;
+var container, canvas;
 var camera, scene, renderer;
 var uniforms, material, mesh;
-var gui;
+var recorder, recording;
 
 var startTime = Date.now();
 
 run();
 
 function run() {
-	loadOpts().then(json => {
-		opts = json;
+	loadCfg().then(json => {
+		cfg = json;
 		console.log();
 		return loadGamepad();	
 	}).then(gp => {
@@ -51,13 +51,14 @@ function run() {
 		vertexShader = text;		
 		initUniforms();
 		initThree();
+		initRecorder();
 		animate();
 	});
 }
 
-function loadOpts() {
+function loadCfg() {
 	return new Promise(resolve => {
-		fetch('opts.json', {method:"GET"}).then(response => {
+		fetch('config/config.json', {method:"GET"}).then(response => {
 				return response.json();
 			}).then(response => {
 				resolve(response);
@@ -88,7 +89,7 @@ function initUniforms() {
 		u_time: { type: "f", value: 1.0 },
 		u_resolution: { type: "v2", value: new THREE.Vector2(canvasSize,canvasSize) },
 	};
-	_.forEach(opts.vars, (v,k) => {
+	_.forEach(cfg.vars, (v,k) => {
 		uniforms[k] = { type: "f", value: v.value};
 	});
 }
@@ -108,10 +109,16 @@ function initThree() {
 	mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
 	scene.add(mesh);
 
-	renderer = new THREE.WebGLRenderer(opts.renderer);
+	renderer = new THREE.WebGLRenderer(cfg.renderer);
 	renderer.setPixelRatio(window.devicePixelRatio ? window.devicePixelRatio : 1);
 	container.appendChild(renderer.domElement);
 	renderer.setSize(canvasSize, canvasSize);
+}
+
+function initRecorder() {
+	var canvas = container.firstElementChild;
+	recorder = new CanvasRecorder(canvas);
+	recording = false;
 }
 
 function getInput(key) {
@@ -121,10 +128,21 @@ function getInput(key) {
 function update() {
 	uniforms.u_time.value = ((Date.now() - startTime) / 1000.);
 	
-	uniforms.u_vshift.value += opts.vars.u_vshift.step * getInput("l_joy_x") * -1;
-	uniforms.u_pshift.value += opts.vars.u_pshift.step * getInput("r_joy_x") * -1;
-	uniforms.u_frequency.value += opts.vars.u_frequency.step * getInput("d_pad_x") * -1;
-	uniforms.u_amplitude.value += opts.vars.u_amplitude.step * getInput("l_joy_y") * -1;
+	uniforms.u_vshift.value += cfg.vars.u_vshift.step * getInput("l_joy_x") * -1;
+	uniforms.u_pshift.value += cfg.vars.u_pshift.step * getInput("r_joy_x") * -1;
+	uniforms.u_frequency.value += cfg.vars.u_frequency.step * getInput("d_pad_x") * -1;
+	uniforms.u_ratio.value += cfg.vars.u_ratio.step * getInput("d_pad_y") * -1;
+	uniforms.u_amplitude.value += cfg.vars.u_amplitude.step * getInput("l_joy_y") * -1;
+
+	if (getInput("l").pressed && !recording) {
+		recorder.start();
+		recording = true;
+	}
+	if (getInput("r").pressed && recording) {
+		recorder.stop();
+		recording = false;
+		recorder.save();
+	}
 }
 
 function animate() {

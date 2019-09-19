@@ -103,21 +103,23 @@ float polyOut(float x) {
 float polyInOut(float x) {
 	float b = u_frequency * 1.;
 	return (mod(x,b) <= 1./(2.*b)) ? polyIn(x*2.) : polyOut(x*2.);
-} 
+}
+
+float eval(vec2 rt) {
+	float fx = (rt.x -.5) - pulse(rt.y);
+	float dist = mod((rt.y - fx), .2);
+	return step(dist, .05);
+}
 
 
 void main(){
-    vec2 st = gl_FragCoord.xy/u_resolution.xy; // adjust to square
-	vec2 pos = vec2(0.5) - st;
-	vec2 rt = vec2(length(pos)*2.,atan(pos.y,pos.x)); // radius & theta
-	vec2 n_rt = vec2(rt.x, rt.y / M_2PI); // normalized radius & theta
+	vec2 pos = vec2(0.5) - (gl_FragCoord.xy/u_resolution.xy);
+	vec2 rt = vec2(length(pos)*2.,atan(pos.y,pos.x) / M_2PI); // radius & normalized theta
 
-	float mx = polyIn(n_rt.y);
-	float fx = (n_rt.x - .5) - mx;
+	// float mx = polyIn(rt.y);
+	// float fx = (nrt.x - .5) - mx;
 
-	float f = step(0.,fx);
-
-	vec3 color = vec3(f);
+	vec3 color = vec3(eval(rt));
 	
 	gl_FragColor = vec4(color,1.);
 }
